@@ -1,0 +1,93 @@
+blueprint:
+  name: Squirrel Scarer (Dual Cameras + Dual Sirens)
+  description: >
+    Trigger separate sirens based on which Ring camera detects motion,
+    and always activate the same sprinkler zone after, within a time window.
+  domain: automation
+  input:
+    motion_event_side:
+      name: Side Camera Event ID
+      default: "event.side_motion"
+      selector:
+        text: {}
+    motion_event_side_yard:
+      name: Side Yard Camera Event ID
+      default: "event.side_yard_motion"
+      selector:
+        text: {}
+    siren_side:
+      name: Side Siren
+      selector:
+        entity:
+          domain: siren
+    siren_side_yard:
+      name: Side Yard Siren
+      selector:
+        entity:
+          domain: siren
+    sprinkler_zone:
+      name: Sprinkler Zone Switch
+      selector:
+        entity:
+          domain: switch
+    start_time:
+      name: Active Start Time
+      default: "20:00:00"
+      selector:
+        time: {}
+    end_time:
+      name: Active End Time
+      default: "06:00:00"
+      selector:
+        time: {}
+
+trigger:
+  - platform: event
+    event_type: !input motion_event_side
+    id: side_motion
+  - platform: event
+    event_type: !input motion_event_side_yard
+    id: side_yard_motion
+
+condition:
+  - condition: time
+    after: !input start_time
+    before: !input end_time
+
+action:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: side_motion
+        sequence:
+          - service: siren.turn_on
+            target:
+              entity_id: !input siren_side
+          - delay:
+              seconds: 5
+          - service: siren.turn_off
+            target:
+              entity_id: !input siren_side
+      - conditions:
+          - condition: trigger
+            id: side_yard_motion
+        sequence:
+          - service: siren.turn_on
+            target:
+              entity_id: !input siren_side_yard
+          - delay:
+              seconds: 5
+          - service: siren.turn_off
+            target:
+              entity_id: !input siren_side_yard
+  - service: switch.turn_on
+    target:
+      entity_id: !input sprinkler_zone
+  - delay:
+      seconds: 2
+  - service: switch.turn_off
+    target:
+      entity_id: !input sprinkler_zone
+
+mode: single
+
